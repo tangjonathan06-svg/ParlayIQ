@@ -1,4 +1,4 @@
-# predmark
+# ParlayIQ
 
 A machine learning model that predicts MLB game outcomes and generates daily parlay recommendations.
 
