@@ -37,4 +37,3 @@ python fetch.py
 
 - Python 3.8+
 - The Odds API key (free tier works)
-- No API key needed for MLB Stats API
