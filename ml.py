@@ -8,7 +8,14 @@ import pickle
 base = os.path.dirname(__file__)
 df = pd.read_csv(os.path.join(base, "games.csv"))
 df = df[df["home_won"] != ""]
-X = df[["home_odds", "away_odds", "home_win_rate", "away_win_rate", "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era"]]
+X = df[["home_odds", "away_odds", "home_win_rate", "away_win_rate",
+        "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era",
+        "home_runs_per_game", "away_runs_per_game",
+        "home_runs_allowed_per_game", "away_runs_allowed_per_game",
+        "home_pitcher_k9", "away_pitcher_k9",
+        "home_pitcher_bb9", "away_pitcher_bb9",
+        "home_run_diff_per_game", "away_run_diff_per_game",
+        "home_away_win_rate", "away_home_win_rate"]]
 y = df["home_won"]
 X=X.dropna()
 y=y[X.index]
