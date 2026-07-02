@@ -12,7 +12,16 @@ base = os.path.dirname(__file__)
 save_path = os.path.join(base, "games.csv")
 
 fields = ["game_id", "date", "home_team", "away_team",
-          "home_odds", "away_odds", "home_won", "home_win_rate","away_win_rate","home_whip","away_whip","home_pitcher_era","away_pitcher_era"]
+          "home_odds", "away_odds", "home_won",
+          "home_win_rate", "away_win_rate",
+          "home_whip", "away_whip",
+          "home_pitcher_era", "away_pitcher_era",
+          "home_runs_per_game", "away_runs_per_game",
+          "home_runs_allowed_per_game", "away_runs_allowed_per_game",
+          "home_pitcher_k9", "away_pitcher_k9",
+          "home_pitcher_bb9", "away_pitcher_bb9",
+          "home_run_diff_per_game", "away_run_diff_per_game",
+          "home_away_win_rate", "away_home_win_rate"]
 
 if not os.path.exists(save_path):
     with open(save_path, "w", newline="") as f:
@@ -40,9 +49,23 @@ for record in standings_resp["records"]:
         name = team["team"]["name"]
         wins = team["leagueRecord"]["wins"]
         losses = team["leagueRecord"]["losses"]
+        games_played = team.get("gamesPlayed", 1) or 1
+        runs_scored = team.get("runsScored", 0)
+        runs_allowed = team.get("runsAllowed", 0)
+        run_diff = team.get("runDifferential", 0)
+        home_record = next((r for r in team.get("records", {}).get("splitRecords", []) if r["type"] == "home"), {})
+        away_record = next((r for r in team.get("records", {}).get("splitRecords", []) if r["type"] == "away"), {})
+        home_wins = home_record.get("wins", 0)
+        home_losses = home_record.get("losses", 0)
+        away_wins = away_record.get("wins", 0)
+        away_losses = away_record.get("losses", 0)
         team_stats[name] = {
             "win_rate": wins / (wins + losses) if (wins + losses) > 0 else 0,
-            "run_diff": team["runDifferential"]
+            "runs_per_game": runs_scored / games_played,
+            "runs_allowed_per_game": runs_allowed / games_played,
+            "run_diff_per_game": run_diff / games_played,
+            "home_win_rate": home_wins / (home_wins + home_losses) if (home_wins + home_losses) > 0 else 0,
+            "away_win_rate": away_wins / (away_wins + away_losses) if (away_wins + away_losses) > 0 else 0,
         }
 
 schedule_url = "https://statsapi.mlb.com/api/v1/schedule"
@@ -60,14 +83,14 @@ for date in schedule_resp.get("dates", []):
 
 def get_pitcher_stats(pitcher_id):
     if not pitcher_id:
-        return None, None
+        return None, None, None, None
     url=f"https://statsapi.mlb.com/api/v1/people/{pitcher_id}/stats?stats=season&season=2026&group=pitching"
     resp = requests.get(url).json()
     splits=resp["stats"][0]["splits"]
     if not splits:
-        return None, None
+        return None, None, None, None
     stat = splits[0]["stat"]
-    return stat.get("era"), stat.get("whip")
+    return stat.get("era"), stat.get("whip"), stat.get("strikeoutsPer9Inn"), stat.get("walksPer9Inn")
 updated = 0
 with open(save_path,"r") as f:
     all_rows=list(csv.DictReader(f))
@@ -116,8 +139,8 @@ for game in odds_resp:
         score_map = {sc["name"]: int(sc["score"]) for sc in s.get("scores", [])}
         if home in score_map and away in score_map:
             home_won = 1 if score_map[home] > score_map[away] else 0
-    home_era, home_whip = get_pitcher_stats(pitcher_ids.get(home))
-    away_era, away_whip = get_pitcher_stats(pitcher_ids.get(away))
+    home_era, home_whip, home_k9, home_bb9 = get_pitcher_stats(pitcher_ids.get(home))
+    away_era, away_whip, away_k9, away_bb9 = get_pitcher_stats(pitcher_ids.get(away))
     home_stats = team_stats.get(home, {})
     away_stats = team_stats.get(away, {})
     rows.append({
@@ -130,11 +153,22 @@ for game in odds_resp:
         "home_won":  home_won,
         "home_win_rate": home_stats.get("win_rate"),
         "away_win_rate": away_stats.get("win_rate"),
-        "home_whip":     home_whip,
-        "away_whip":     away_whip,
+        "home_whip": home_whip,
+        "away_whip": away_whip,
         "home_pitcher_era": home_era,
         "away_pitcher_era": away_era,
-
+        "home_runs_per_game": home_stats.get("runs_per_game"),
+        "away_runs_per_game": away_stats.get("runs_per_game"),
+        "home_runs_allowed_per_game": home_stats.get("runs_allowed_per_game"),
+        "away_runs_allowed_per_game": away_stats.get("runs_allowed_per_game"),
+        "home_pitcher_k9": home_k9,
+        "away_pitcher_k9": away_k9,
+        "home_pitcher_bb9": home_bb9,
+        "away_pitcher_bb9": away_bb9,
+        "home_run_diff_per_game": home_stats.get("run_diff_per_game"),
+        "away_run_diff_per_game": away_stats.get("run_diff_per_game"),
+        "home_away_win_rate": home_stats.get("home_win_rate"),
+        "away_home_win_rate": away_stats.get("away_win_rate"),
     })
 
 with open(save_path, "a", newline="") as f:
