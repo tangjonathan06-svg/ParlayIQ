@@ -21,7 +21,12 @@ fields = ["game_id", "date", "home_team", "away_team",
           "home_pitcher_k9", "away_pitcher_k9",
           "home_pitcher_bb9", "away_pitcher_bb9",
           "home_run_diff_per_game", "away_run_diff_per_game",
-          "home_away_win_rate", "away_home_win_rate"]
+          "home_away_win_rate", "away_home_win_rate",
+          "home_ops", "away_ops",
+          "home_hr_per_game", "away_hr_per_game",
+          "home_k_rate", "away_k_rate",
+          "home_bb_rate", "away_bb_rate",
+          "home_avg", "away_avg"]
 
 if not os.path.exists(save_path):
     with open(save_path, "w", newline="") as f:
@@ -40,13 +45,52 @@ odds_resp = requests.get(odds_url, params=odds_params, verify=certifi.where()).j
 scores_url = "https://api.the-odds-api.com/v4/sports/baseball_mlb/scores"
 scores_resp = requests.get(scores_url, params={"apiKey": API_KEY, "daysFrom": 1}, verify=certifi.where()).json()
 scores_by_id = {g["id"]: g for g in scores_resp if g.get("completed")}
+name_map = {
+    "Arizona Diamondbacks": "D-backs",
+    "Atlanta Braves": "Braves",
+    "Baltimore Orioles": "Orioles",
+    "Boston Red Sox": "Red Sox",
+    "Chicago Cubs": "Cubs",
+    "Chicago White Sox": "White Sox",
+    "Cincinnati Reds": "Reds",
+    "Cleveland Guardians": "Guardians",
+    "Colorado Rockies": "Rockies",
+    "Detroit Tigers": "Tigers",
+    "Houston Astros": "Astros",
+    "Kansas City Royals": "Royals",
+    "Los Angeles Angels": "Angels",
+    "Los Angeles Dodgers": "Dodgers",
+    "Miami Marlins": "Marlins",
+    "Milwaukee Brewers": "Brewers",
+    "Minnesota Twins": "Twins",
+    "New York Mets": "Mets",
+    "New York Yankees": "Yankees",
+    "Athletics": "Athletics",
+    "Philadelphia Phillies": "Phillies",
+    "Pittsburgh Pirates": "Pirates",
+    "San Diego Padres": "Padres",
+    "San Francisco Giants": "Giants",
+    "Seattle Mariners": "Mariners",
+    "St. Louis Cardinals": "Cardinals",
+    "Tampa Bay Rays": "Rays",
+    "Texas Rangers": "Rangers",
+    "Toronto Blue Jays": "Blue Jays",
+    "Washington Nationals": "Nationals",
+}
+
 standings_url = "https://statsapi.mlb.com/api/v1/standings"
 standings_params={"leagueId":"103,104","season":"2026","standingsTypes":"regularSeason"}
 standings_resp=requests.get(standings_url,params=standings_params).json()
+hit_resp = requests.get("https://statsapi.mlb.com/api/v1/teams/stats?stats=season&season=2026&group=hitting&gameType=R&sportId=1").json()
+hitting_by_id = {}
+for split in hit_resp["stats"][0]["splits"]:
+    hitting_by_id[split["team"]["id"]] = split["stat"]
+
 team_stats = {}
 for record in standings_resp["records"]:
     for team in record["teamRecords"]:
         name = team["team"]["name"]
+        team_id = team["team"]["id"]
         wins = team["leagueRecord"]["wins"]
         losses = team["leagueRecord"]["losses"]
         games_played = team.get("gamesPlayed", 1) or 1
@@ -59,6 +103,9 @@ for record in standings_resp["records"]:
         home_losses = home_record.get("losses", 0)
         away_wins = away_record.get("wins", 0)
         away_losses = away_record.get("losses", 0)
+        hit = hitting_by_id.get(team_id, {})
+        pa = hit.get("plateAppearances", 1) or 1
+
         team_stats[name] = {
             "win_rate": wins / (wins + losses) if (wins + losses) > 0 else 0,
             "runs_per_game": runs_scored / games_played,
@@ -66,6 +113,11 @@ for record in standings_resp["records"]:
             "run_diff_per_game": run_diff / games_played,
             "home_win_rate": home_wins / (home_wins + home_losses) if (home_wins + home_losses) > 0 else 0,
             "away_win_rate": away_wins / (away_wins + away_losses) if (away_wins + away_losses) > 0 else 0,
+            "ops": hit.get("ops"),
+            "hr_per_game": (hit.get("homeRuns", 0) or 0) / games_played,
+            "k_rate": (hit.get("strikeOuts", 0) or 0) / pa,
+            "bb_rate": (hit.get("baseOnBalls", 0) or 0) / pa,
+            "avg": hit.get("avg"),
         }
 
 schedule_url = "https://statsapi.mlb.com/api/v1/schedule"
@@ -141,8 +193,8 @@ for game in odds_resp:
             home_won = 1 if score_map[home] > score_map[away] else 0
     home_era, home_whip, home_k9, home_bb9 = get_pitcher_stats(pitcher_ids.get(home))
     away_era, away_whip, away_k9, away_bb9 = get_pitcher_stats(pitcher_ids.get(away))
-    home_stats = team_stats.get(home, {})
-    away_stats = team_stats.get(away, {})
+    home_stats = team_stats.get(name_map.get(home, home), {})
+    away_stats = team_stats.get(name_map.get(away, away), {})
     rows.append({
         "game_id":   gid,
         "date":      date,
@@ -169,6 +221,16 @@ for game in odds_resp:
         "away_run_diff_per_game": away_stats.get("run_diff_per_game"),
         "home_away_win_rate": home_stats.get("home_win_rate"),
         "away_home_win_rate": away_stats.get("away_win_rate"),
+        "home_ops": home_stats.get("ops"),
+        "away_ops": away_stats.get("ops"),
+        "home_hr_per_game": home_stats.get("hr_per_game"),
+        "away_hr_per_game": away_stats.get("hr_per_game"),
+        "home_k_rate": home_stats.get("k_rate"),
+        "away_k_rate": away_stats.get("k_rate"),
+        "home_bb_rate": home_stats.get("bb_rate"),
+        "away_bb_rate": away_stats.get("bb_rate"),
+        "home_avg": home_stats.get("avg"),
+        "away_avg": away_stats.get("avg"),
     })
 
 with open(save_path, "a", newline="") as f:
