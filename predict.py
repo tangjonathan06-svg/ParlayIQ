@@ -50,14 +50,14 @@ for date in schedule_resp.get("dates", []):
 
 def get_pitcher_stats(pitcher_id):
     if not pitcher_id:
-        return None, None
+        return None, None, None, None
     url=f"https://statsapi.mlb.com/api/v1/people/{pitcher_id}/stats?stats=season&season=2026&group=pitching"
     resp = requests.get(url).json()
     splits=resp["stats"][0]["splits"]
     if not splits:
-        return None, None
+        return None, None, None, None
     stat = splits[0]["stat"]
-    return stat.get("era"), stat.get("whip")
+    return stat.get("era"), stat.get("whip"), stat.get("strikeoutsPer9Inn"), stat.get("walksPer9Inn")
 games = []
 for game in odds_resp:
     home = game["home_team"]
@@ -73,11 +73,29 @@ for game in odds_resp:
                 elif outcome["name"] == away:
                     away_odds = outcome["price"]
 
-    home_era, home_whip = get_pitcher_stats(pitcher_ids.get(home))
-    away_era, away_whip = get_pitcher_stats(pitcher_ids.get(away))
+    home_era, home_whip, home_k9, home_bb9 = get_pitcher_stats(pitcher_ids.get(home))
+    away_era, away_whip, away_k9, away_bb9 = get_pitcher_stats(pitcher_ids.get(away))
     home_stats = team_stats.get(home, {})
     away_stats = team_stats.get(away, {})
-    features = pd.DataFrame([[home_odds, away_odds, home_stats.get("win_rate"), away_stats.get("win_rate"), home_whip, away_whip, home_era, away_era]], columns=["home_odds", "away_odds", "home_win_rate", "away_win_rate", "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era"])
+    features = pd.DataFrame([[
+        home_odds, away_odds,
+        home_stats.get("win_rate"), away_stats.get("win_rate"),
+        home_whip, away_whip,
+        home_era, away_era,
+        home_stats.get("runs_per_game"), away_stats.get("runs_per_game"),
+        home_stats.get("runs_allowed_per_game"), away_stats.get("runs_allowed_per_game"),
+        home_k9, away_k9,
+        home_bb9, away_bb9,
+        home_stats.get("run_diff_per_game"), away_stats.get("run_diff_per_game"),
+        home_stats.get("home_win_rate"), away_stats.get("away_win_rate"),
+    ]], columns=["home_odds", "away_odds", "home_win_rate", "away_win_rate",
+                 "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era",
+                 "home_runs_per_game", "away_runs_per_game",
+                 "home_runs_allowed_per_game", "away_runs_allowed_per_game",
+                 "home_pitcher_k9", "away_pitcher_k9",
+                 "home_pitcher_bb9", "away_pitcher_bb9",
+                 "home_run_diff_per_game", "away_run_diff_per_game",
+                 "home_away_win_rate", "away_home_win_rate"])
     prob = model.predict_proba(features)[0][1]
     games.append({"home": home, "away": away, "date": date, "home_odds": home_odds, "prob": prob})
 
@@ -92,4 +110,5 @@ print("Best 5-leg parlay")
 for g in top5:
     print(f"{g['home']} vs {g['away']} | home win prob: {round(g['prob']*100, 1)}% | odds: {g['home_odds']}")
 print(f"\nCombined parlay odds: {round(parlay_odds, 2)}")
+
 
