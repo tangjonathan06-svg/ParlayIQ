@@ -6,7 +6,7 @@ A machine learning model that predicts MLB game outcomes and generates daily par
 
 1. `fetch.py` — runs daily to collect game data from The Odds API and MLB Stats API
 2. `ml.py` — trains a Random Forest model on completed game data (build once you have enough data)
-3. `predict.py` — uses the trained model to recommend a 5-leg parlay (build once model is trained)
+3. `predict.py` — uses the trained model to predict and recommend a 5-leg parlay (build once model is trained)
 
 ## Data collected per game
 
