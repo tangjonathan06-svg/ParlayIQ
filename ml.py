@@ -15,7 +15,12 @@ X = df[["home_odds", "away_odds", "home_win_rate", "away_win_rate",
         "home_pitcher_k9", "away_pitcher_k9",
         "home_pitcher_bb9", "away_pitcher_bb9",
         "home_run_diff_per_game", "away_run_diff_per_game",
-        "home_away_win_rate", "away_home_win_rate"]]
+        "home_away_win_rate", "away_home_win_rate",
+        "home_ops", "away_ops",
+        "home_hr_per_game", "away_hr_per_game",
+        "home_k_rate", "away_k_rate",
+        "home_bb_rate", "away_bb_rate",
+        "home_avg", "away_avg"]]
 y = df["home_won"]
 X=X.dropna()
 y=y[X.index]
