@@ -139,7 +139,6 @@ for game in odds_resp:
     home_stats = team_stats.get(name_map.get(home, home), {})
     away_stats = team_stats.get(name_map.get(away, away), {})
     features = pd.DataFrame([[
-        home_odds, away_odds,
         home_stats.get("win_rate"), away_stats.get("win_rate"),
         home_whip, away_whip,
         home_era, away_era,
@@ -154,7 +153,7 @@ for game in odds_resp:
         home_stats.get("k_rate"), away_stats.get("k_rate"),
         home_stats.get("bb_rate"), away_stats.get("bb_rate"),
         home_stats.get("avg"), away_stats.get("avg"),
-    ]], columns=["home_odds", "away_odds", "home_win_rate", "away_win_rate",
+    ]], columns=["home_win_rate", "away_win_rate",
                  "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era",
                  "home_runs_per_game", "away_runs_per_game",
                  "home_runs_allowed_per_game", "away_runs_allowed_per_game",
@@ -167,18 +166,24 @@ for game in odds_resp:
                  "home_k_rate", "away_k_rate",
                  "home_bb_rate", "away_bb_rate",
                  "home_avg", "away_avg"])
-    prob = model.predict_proba(features)[0][1]
-    games.append({"home": home, "away": away, "date": date, "home_odds": home_odds, "prob": prob})
-
-games.sort(key=lambda x: x["prob"], reverse=True)
+    if home_odds is None or away_odds is None:
+        continue
+    home_prob = model.predict_proba(features)[0][1]
+    away_prob = 1-home_prob
+    if home_prob >= away_prob:
+        pick, pick_prob, pick_odds = home, home_prob, home_odds
+    else:
+        pick, pick_prob, pick_odds = away, away_prob, away_odds
+    ev = pick_prob*pick_odds-1
+    games.append({"home": home, "away": away, "date": date,
+    "pick": pick, "pick_prob": pick_prob, "pick_odds": pick_odds, "ev": ev,})
+games.sort(key=lambda x:x["ev"],reverse=True)
 top5 = games[:5]
-
-parlay_odds = 1
+parlay_odds=1
 for g in top5:
-    parlay_odds *= g["home_odds"]
-
-print("Best 5-leg parlay")
+    parlay_odds *= g["pick_odds"]
+print("Best 5-leg parlay (ranked by expected value)")
 for g in top5:
-    print(f"{g['home']} vs {g['away']} | home win prob: {round(g['prob']*100, 1)}% | odds: {g['home_odds']}")
+    print(f"{g['home']} vs {g['away']} | pick: {g['pick']} | win prob: {round(g['pick_prob']*100, 1)}% "
+          f"| odds: {g['pick_odds']} | EV: {round(g['ev'], 3)}")
 print(f"\nCombined parlay odds: {round(parlay_odds, 2)}")
-
