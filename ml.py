@@ -7,8 +7,8 @@ import pickle
 
 base = os.path.dirname(__file__)
 df = pd.read_csv(os.path.join(base, "games.csv"))
-df = df[df["home_won"] != ""]
-X = df[["home_odds", "away_odds", "home_win_rate", "away_win_rate",
+df = df[df["home_won"].notna()]
+X = df[["home_win_rate", "away_win_rate",
         "home_whip", "away_whip", "home_pitcher_era", "away_pitcher_era",
         "home_runs_per_game", "away_runs_per_game",
         "home_runs_allowed_per_game", "away_runs_allowed_per_game",
