@@ -1,0 +1,52 @@
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: system-ui, sans-serif;
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #888;
+  margin-top: 0;
+  margin-bottom: 24px;
+}
+
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-card {
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 14px 18px;
+  text-align: left;
+}
+
+.matchup {
+  font-weight: 600;
+}
+
+.pick {
+  color: #4ade80;
+  margin-top: 4px;
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+.parlay-summary {
+  margin-top: 28px;
+  font-size: 1.1em;
+  text-align: center;
+}
